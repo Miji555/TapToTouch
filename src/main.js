@@ -2,17 +2,36 @@
 
 import { scene, camera, renderer } from './scene.js';
 import { initHand, handX, handY } from './hand.js';
-import { createSword, createBlock } from './objects.js';
-import { UI, show } from './ui.js';
+import { createFloor, createSword, createNote } from './objects.js';
 
 // --------------------
 // GAME STATE
 // --------------------
 let state = 'MENU'; // MENU | PLAYING | PAUSED | GAMEOVER
 let score = 0;
-let bestScore = localStorage.getItem('bestScore') || 0;
+let combo = 0;
+let hp = 100;
 
-UI.bestScore.innerText = `Best Score: ${bestScore}`;
+let notes = [];
+
+// --------------------
+// UI ELEMENTS
+// --------------------
+const menu = document.getElementById('menu');
+const hud = document.getElementById('hud');
+const pauseUI = document.getElementById('pause');
+const gameoverUI = document.getElementById('gameover');
+
+const scoreText = document.getElementById('scoreText') || document.getElementById('score');
+const comboText = document.getElementById('combo');
+const finalScore = document.getElementById('finalScore');
+
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const retryBtn = document.getElementById('retryBtn');
+const homeBtn = document.getElementById('homeBtn');
+const homeBtn2 = document.getElementById('homeBtn2');
 
 // --------------------
 // CAMERA (VIDEO)
@@ -21,56 +40,78 @@ const video = document.getElementById('camera');
 initHand(video);
 
 // --------------------
-// GAME OBJECTS
+// SCENE SETUP
 // --------------------
+createFloor(scene);
 const sword = createSword(scene);
-let blocks = [];
 
 // --------------------
-// GAME CONTROL
+// GAME FUNCTIONS
 // --------------------
-function resetGame() {
-  blocks.forEach(b => scene.remove(b));
-  blocks = [];
-  score = 0;
-  UI.scoreText.innerText = 'Score: 0';
+function showUI(name) {
+  menu.classList.add('hidden');
+  hud.classList.add('hidden');
+  pauseUI.classList.add('hidden');
+  gameoverUI.classList.add('hidden');
+
+  if (name === 'menu') menu.classList.remove('hidden');
+  if (name === 'hud') hud.classList.remove('hidden');
+  if (name === 'pause') pauseUI.classList.remove('hidden');
+  if (name === 'gameover') gameoverUI.classList.remove('hidden');
 }
 
-// spawn block
+function resetGame() {
+  notes.forEach(n => scene.remove(n));
+  notes = [];
+  score = 0;
+  combo = 0;
+  hp = 100;
+  updateHUD();
+}
+
+function updateHUD() {
+  if (scoreText) scoreText.innerText = `Score: ${score}`;
+  if (comboText) comboText.innerText = `${combo}x COMBO`;
+}
+
+// --------------------
+// SPAWN NOTES
+// --------------------
 setInterval(() => {
   if (state === 'PLAYING') {
-    blocks.push(createBlock(scene));
+    const color = Math.random() > 0.5 ? 'red' : 'blue';
+    notes.push(createNote(scene, color));
   }
 }, 900);
 
 // --------------------
 // UI EVENTS
 // --------------------
-UI.startBtn.onclick = () => {
+startBtn.onclick = () => {
   resetGame();
   state = 'PLAYING';
-  show('hud');
+  showUI('hud');
 };
 
-UI.pauseBtn.onclick = () => {
+pauseBtn.onclick = () => {
   state = 'PAUSED';
-  show('pause');
+  showUI('pause');
 };
 
-UI.resumeBtn.onclick = () => {
+resumeBtn.onclick = () => {
   state = 'PLAYING';
-  show('hud');
+  showUI('hud');
 };
 
-UI.retryBtn.onclick = () => {
+retryBtn.onclick = () => {
   resetGame();
   state = 'PLAYING';
-  show('hud');
+  showUI('hud');
 };
 
-UI.homeBtn.onclick = UI.homeBtn2.onclick = () => {
+homeBtn.onclick = homeBtn2.onclick = () => {
   state = 'MENU';
-  show('menu');
+  showUI('menu');
 };
 
 // --------------------
@@ -78,15 +119,8 @@ UI.homeBtn.onclick = UI.homeBtn2.onclick = () => {
 // --------------------
 function gameOver() {
   state = 'GAMEOVER';
-  UI.finalScore.innerText = `Score: ${score}`;
-
-  if (score > bestScore) {
-    bestScore = score;
-    localStorage.setItem('bestScore', bestScore);
-    UI.bestScore.innerText = `Best Score: ${bestScore}`;
-  }
-
-  show('gameover');
+  finalScore.innerText = `Score: ${score}`;
+  showUI('gameover');
 }
 
 // --------------------
@@ -96,28 +130,33 @@ function animate() {
   requestAnimationFrame(animate);
 
   if (state === 'PLAYING') {
-    // sword follow hand
+    // sword follows hand
     sword.position.x += (handX - sword.position.x) * 0.4;
     sword.position.y += (handY - sword.position.y) * 0.4;
 
-    blocks = blocks.filter(b => {
-      b.position.z += 0.7;
+    notes = notes.filter(note => {
+      note.position.z += 0.6;
 
       const hit =
-        Math.abs(b.position.x - sword.position.x) < 0.5 &&
-        Math.abs(b.position.y - sword.position.y) < 0.8 &&
-        Math.abs(b.position.z - sword.position.z) < 0.6;
+        Math.abs(note.position.x - sword.position.x) < 0.6 &&
+        Math.abs(note.position.y - sword.position.y) < 0.6 &&
+        Math.abs(note.position.z - sword.position.z) < 0.6;
 
       if (hit) {
-        scene.remove(b);
-        score++;
-        UI.scoreText.innerText = `Score: ${score}`;
+        scene.remove(note);
+        score += 10;
+        combo++;
+        updateHUD();
         return false;
       }
 
-      if (b.position.z > 6) {
-        scene.remove(b);
-        gameOver();
+      if (note.position.z > camera.position.z + 1) {
+        scene.remove(note);
+        combo = 0;
+        hp -= 20;
+        updateHUD();
+
+        if (hp <= 0) gameOver();
         return false;
       }
 
@@ -129,5 +168,5 @@ function animate() {
 }
 
 // --------------------
-show('menu');
+showUI('menu');
 animate();
