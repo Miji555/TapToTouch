@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -9,6 +10,7 @@ export enum GameStatus {
   LOADING = 'LOADING',
   IDLE = 'IDLE',
   PLAYING = 'PLAYING',
+  PAUSED = 'PAUSED',
   GAME_OVER = 'GAME_OVER',
   VICTORY = 'VICTORY'
 }

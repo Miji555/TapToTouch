@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,7 +13,7 @@ import { DEMO_CHART, SONG_URL, SONG_BPM } from './constants';
 import { useMediaPipe } from './hooks/useMediaPipe';
 import GameScene from './components/GameScene';
 import WebcamPreview from './components/WebcamPreview';
-import { Play, RefreshCw, VideoOff, Hand, Sparkles } from 'lucide-react';
+import { Play, RefreshCw, VideoOff, Hand, Sparkles, Pause, Home } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameStatus, setGameStatus] = useState<GameStatus>(GameStatus.LOADING);
@@ -24,9 +25,7 @@ const App: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(new Audio(SONG_URL));
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  // Now getting lastResultsRef from the hook
   const { isCameraReady, handPositionsRef, lastResultsRef, error: cameraError } = useMediaPipe(videoRef);
-  const { progress } = useProgress(); 
 
   // Game Logic Handlers
   const handleNoteHit = useCallback((note: NoteData, goodCut: boolean) => {
@@ -86,6 +85,32 @@ const App: React.FC = () => {
     }
   };
 
+  const pauseGame = () => {
+    if (gameStatus === GameStatus.PLAYING) {
+        setGameStatus(GameStatus.PAUSED);
+        audioRef.current?.pause();
+    }
+  };
+
+  const resumeGame = async () => {
+    if (gameStatus === GameStatus.PAUSED) {
+        setGameStatus(GameStatus.PLAYING);
+        try {
+            await audioRef.current?.play();
+        } catch (e) {
+            console.error("Failed to resume audio", e);
+        }
+    }
+  };
+
+  const quitToMenu = () => {
+      setGameStatus(GameStatus.IDLE);
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+      }
+  };
+
   const endGame = (victory: boolean) => {
       setGameStatus(victory ? GameStatus.VICTORY : GameStatus.GAME_OVER);
       if (audioRef.current) {
@@ -98,6 +123,18 @@ const App: React.FC = () => {
           setGameStatus(GameStatus.IDLE);
       }
   }, [isCameraReady, gameStatus]);
+
+  // Handle keyboard pause (Esc or Space)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.key === ' ') {
+            if (gameStatus === GameStatus.PLAYING) pauseGame();
+            else if (gameStatus === GameStatus.PAUSED) resumeGame();
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameStatus]);
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans">
@@ -113,7 +150,7 @@ const App: React.FC = () => {
 
       {/* 3D Canvas */}
       <Canvas shadows dpr={[1, 2]}>
-          {gameStatus !== GameStatus.LOADING && (
+          {(gameStatus !== GameStatus.LOADING && gameStatus !== GameStatus.IDLE) && (
              <GameScene 
                 gameStatus={gameStatus}
                 audioRef={audioRef}
@@ -146,7 +183,7 @@ const App: React.FC = () => {
                         style={{ width: `${health}%` }}
                      />
                  </div>
-                 <p className="text-xs mt-1 opacity-70">System Integrity</p>
+                 <p className="text-xs mt-1 opacity-70 uppercase tracking-widest font-bold">System Integrity</p>
              </div>
 
              {/* Score & Combo */}
@@ -166,14 +203,24 @@ const App: React.FC = () => {
                  </div>
              </div>
              
-             <div className="w-1/3"></div>
+             {/* Actions - Ensure buttons are clickable */}
+             <div className="w-1/3 flex justify-end">
+                {gameStatus === GameStatus.PLAYING && (
+                    <button 
+                        onClick={pauseGame}
+                        className="pointer-events-auto bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all border border-white/20 active:scale-90"
+                    >
+                        <Pause className="w-6 h-6 text-white" />
+                    </button>
+                )}
+             </div>
           </div>
 
-          {/* Menus (Centered) */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+          {/* Menus Overlay Container - Must be pointer-events-none so it doesn't block HUD */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               
               {gameStatus === GameStatus.LOADING && (
-                  <div className="bg-black/80 p-10 rounded-2xl flex flex-col items-center border border-blue-900/50 backdrop-blur-md">
+                  <div className="pointer-events-auto bg-black/80 p-10 rounded-2xl flex flex-col items-center border border-blue-900/50 backdrop-blur-md">
                       <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-6"></div>
                       <h2 className="text-2xl text-white font-bold mb-2">Initializing System</h2>
                       <p className="text-blue-300">{!isCameraReady ? "Waiting for camera..." : "Loading assets..."}</p>
@@ -182,7 +229,7 @@ const App: React.FC = () => {
               )}
 
               {gameStatus === GameStatus.IDLE && (
-                  <div className="bg-black/80 p-12 rounded-3xl text-center border-2 border-blue-500/30 backdrop-blur-xl max-w-lg">
+                  <div className="pointer-events-auto bg-black/80 p-12 rounded-3xl text-center border-2 border-blue-500/30 backdrop-blur-xl max-w-lg">
                       <div className="mb-6 flex justify-center">
                          <Sparkles className="w-16 h-16 text-blue-400" />
                       </div>
@@ -205,7 +252,7 @@ const App: React.FC = () => {
                       ) : (
                           <button 
                               onClick={startGame}
-                              className="bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-12 rounded-full transition-all transform hover:scale-105 hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] flex items-center justify-center mx-auto gap-3"
+                              className="bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-12 rounded-full transition-all transform hover:scale-105 hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] flex items-center justify-center mx-auto gap-3 active:scale-95"
                           >
                               <Play fill="currentColor" /> START GAME
                           </button>
@@ -217,18 +264,46 @@ const App: React.FC = () => {
                   </div>
               )}
 
+              {gameStatus === GameStatus.PAUSED && (
+                  <div className="pointer-events-auto bg-black/90 p-12 rounded-3xl text-center border-2 border-blue-500/50 backdrop-blur-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+                      <h2 className="text-6xl font-black text-white mb-10 tracking-widest italic uppercase">PAUSED</h2>
+                      <div className="flex flex-col gap-4">
+                          <button 
+                              onClick={resumeGame}
+                              className="bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-12 rounded-full transition-all flex items-center justify-center gap-3 w-full active:scale-95"
+                          >
+                              <Play fill="currentColor" /> RESUME
+                          </button>
+                          <button 
+                              onClick={quitToMenu}
+                              className="bg-white/10 hover:bg-white/20 text-white text-xl font-bold py-4 px-12 rounded-full transition-all flex items-center justify-center gap-3 w-full border border-white/10 active:scale-95"
+                          >
+                              <Home /> MAIN MENU
+                          </button>
+                      </div>
+                  </div>
+              )}
+
               {(gameStatus === GameStatus.GAME_OVER || gameStatus === GameStatus.VICTORY) && (
-                  <div className="bg-black/90 p-12 rounded-3xl text-center border-2 border-white/10 backdrop-blur-xl">
+                  <div className="pointer-events-auto bg-black/90 p-12 rounded-3xl text-center border-2 border-white/10 backdrop-blur-xl">
                       <h2 className={`text-6xl font-bold mb-4 ${gameStatus === GameStatus.VICTORY ? 'text-green-400' : 'text-red-500'}`}>
                           {gameStatus === GameStatus.VICTORY ? "SEQUENCE COMPLETE" : "SYSTEM FAILURE"}
                       </h2>
                       <p className="text-white text-3xl mb-8">Final Score: {score.toLocaleString()}</p>
-                      <button 
-                          onClick={() => setGameStatus(GameStatus.IDLE)}
-                          className="bg-white/10 hover:bg-white/20 text-white text-xl py-3 px-8 rounded-full flex items-center justify-center mx-auto gap-2 transition-colors"
-                      >
-                          <RefreshCw /> Play Again
-                      </button>
+                      <div className="flex flex-col gap-4 max-w-xs mx-auto">
+                        <button 
+                            onClick={startGame}
+                            className="bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-3 px-8 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95"
+                        >
+                            <RefreshCw /> Play Again
+                        </button>
+                        <button 
+                            onClick={quitToMenu}
+                            className="bg-white/10 hover:bg-white/20 text-white text-xl font-bold py-3 px-8 rounded-full flex items-center justify-center gap-2 transition-all border border-white/10 active:scale-95"
+                        >
+                            <Home /> Main Menu
+                        </button>
+                      </div>
                   </div>
               )}
           </div>
