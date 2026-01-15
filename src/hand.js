@@ -1,10 +1,15 @@
+// src/hand.js
+
 export let handX = 0;
 export let handY = 0;
 
+const SENS_X = 6; // ปรับความกว้างการเคลื่อนไหว
+const SENS_Y = 4; // ปรับความสูงการเคลื่อนไหว
+
 export function initHand(video) {
   const hands = new Hands({
-    locateFile: f =>
-      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
   });
 
   hands.setOptions({
@@ -14,15 +19,18 @@ export function initHand(video) {
     minTrackingConfidence: 0.7
   });
 
-  hands.onResults(res => {
-    if (res.multiHandLandmarks?.length) {
-      const p = res.multiHandLandmarks[0][8];
-      handX = (p.x - 0.5) * 6;
-      handY = -(p.y - 0.5) * 4;
+  hands.onResults((results) => {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      // ใช้นิ้วชี้ (index finger tip)
+      const p = results.multiHandLandmarks[0][8];
+
+      // ❗ flip แกน X เพื่อให้ตรงกับทิศมือจริง
+      handX = -(p.x - 0.5) * SENS_X;
+      handY = -(p.y - 0.5) * SENS_Y;
     }
   });
 
-  const cam = new Camera(video, {
+  const camera = new Camera(video, {
     onFrame: async () => {
       await hands.send({ image: video });
     },
@@ -30,5 +38,5 @@ export function initHand(video) {
     height: 480
   });
 
-  cam.start();
+  camera.start();
 }
