@@ -1,30 +1,27 @@
+import * as THREE from 'three';
+
 export const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000, 5, 20);
 
 export const camera = new THREE.PerspectiveCamera(
-  70,
+  60,
   window.innerWidth / window.innerHeight,
   0.1,
-  1000
+  100
 );
+camera.position.set(0, 1.5, 5);
 
-camera.position.set(0, 3, 8);
-camera.rotation.x = -0.35;
-
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
+export const renderer = new THREE.WebGLRenderer({ alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x000000);
 document.body.appendChild(renderer.domElement);
 
-// floor
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(60, 60),
-  new THREE.MeshBasicMaterial({ color: 0x111111 })
-);
-floor.rotation.x = Math.PI / 2;
-scene.add(floor);
+// Light
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dir = new THREE.DirectionalLight(0x66ccff, 1);
+dir.position.set(0, 5, 5);
+scene.add(dir);
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// Grid floor
+const grid = new THREE.GridHelper(40, 40, 0x1e90ff, 0x0a2a44);
+grid.position.y = -1;
+scene.add(grid);
