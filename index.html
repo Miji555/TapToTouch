@@ -5,8 +5,32 @@
   <title>Hand Rhythm Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { margin: 0; overflow: hidden; background: black; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
 
+    /* CAMERA */
+    #camera {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* mirror */
+      z-index: 0;
+    }
+
+    /* THREE CANVAS */
+    canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* UI */
     .ui {
       position: fixed;
       inset: 0;
@@ -17,19 +41,11 @@
       gap: 14px;
       font-family: sans-serif;
       color: white;
-      background: rgba(0,0,0,0.6);
-      z-index: 10;
+      background: rgba(0,0,0,0.55);
+      z-index: 2;
     }
 
     .hidden { display: none; }
-
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
 
     #hud {
       position: fixed;
@@ -40,17 +56,27 @@
       justify-content: space-between;
       align-items: center;
       background: none;
+      z-index: 3;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
     }
   </style>
 </head>
 <body>
+
+<!-- CAMERA -->
+<video id="camera" autoplay playsinline muted></video>
 
 <!-- MAIN MENU -->
 <div id="menu" class="ui">
   <h1>Hand Rhythm Game</h1>
   <p id="bestScore">Best Score: 0</p>
   <button id="startBtn">Start Game</button>
-  <button id="settingBtn">Settings</button>
 </div>
 
 <!-- HUD -->
